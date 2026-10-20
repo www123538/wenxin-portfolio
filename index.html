@@ -496,6 +496,31 @@ body{background:radial-gradient(ellipse at 50% 8%,rgba(217,255,74,.085),transpar
 @media(max-width:620px){.cover-title{font-size:clamp(21px,6vw,27px)}.hero-line{font-size:clamp(55px,14vw,94px)}.cover-glow{opacity:.3}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}.motion-reveal{opacity:1;translate:none}.project .frame{transform:none!important}.project .poster-bg img{translate:none!important}}
 </style>
+<style>
+/* MOBILE UX REPAIR: preserve full workboards and natural pan/zoom */
+html, body{max-width:100%;overflow-x:hidden}
+#modal{position:fixed!important;inset:0!important;overflow:hidden!important}
+#modal.open{display:block!important}
+#modal .detail-shell{width:100%!important;height:100%!important;max-height:none!important;overflow:hidden!important;position:relative!important}
+#modal #detail-scroll{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-height:none!important;overflow-x:auto!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;touch-action:pan-x pan-y pinch-zoom!important;min-width:0!important}
+#modal .detail-actions{display:flex!important;flex-flow:row nowrap!important;align-items:center!important;justify-content:flex-end!important;position:fixed!important;top:calc(env(safe-area-inset-top, 0px) + 10px)!important;right:calc(env(safe-area-inset-right, 0px) + 12px)!important;left:auto!important;bottom:auto!important;gap:8px!important;width:max-content!important;max-width:calc(100vw - 24px)!important;z-index:2147483647!important;overflow:visible!important;transform:none!important;white-space:nowrap!important}
+#modal .detail-actions button{position:static!important;display:grid!important;place-items:center!important;flex:0 0 42px!important;width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important;margin:0!important;padding:0!important;transform:none!important;border-radius:50%!important;touch-action:manipulation!important}
+#modal #detail-long-assets img{display:block!important;height:auto!important;max-height:none!important;object-fit:contain!important;object-position:center!important;transform:none!important;filter:none!important;opacity:1!important;content-visibility:auto}
+@media (max-width:800px){
+  /* no large-screen hover/parallax translation on phones */
+  .projects,.projects .project,.projects .frame,.projects .poster-bg{max-width:100%!important;min-width:0!important}
+  .projects .project{transform:none!important;translate:none!important;rotate:none!important;perspective:none!important}
+  .projects .frame{width:100%!important;height:auto!important;min-height:0!important;aspect-ratio:var(--image-ratio, 4 / 3)!important;transform:none!important;translate:none!important;rotate:none!important;overflow:hidden!important;padding:0!important;display:block!important}
+  .projects .poster-bg{position:absolute!important;inset:0!important;display:block!important;transform:none!important;translate:none!important;scale:1!important}
+  .projects .poster-bg img{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:100%!important;object-fit:contain!important;object-position:center center!important;transform:none!important;translate:none!important;scale:1!important}
+  .motion-reveal{opacity:1!important;translate:none!important;transform:none!important;transition:none!important}
+  #modal .detail-visual-card{width:100%!important;max-width:100%!important;padding:8px!important;overflow:visible!important}
+  #modal #detail-scroll{padding:68px 10px 28px!important}
+  #modal #detail-long-assets{width:100%!important;display:flex!important;flex-direction:column!important;gap:0!important;overflow:visible!important}
+  #modal #detail-long-assets img{width:100%!important;max-width:100%!important}
+  .sound-dock{max-width:calc(100vw - 18px)!important;right:9px!important;left:auto!important;bottom:calc(env(safe-area-inset-bottom, 0px) + 10px)!important;transform:none!important}
+}
+</style>
 </head>
 <body>
 <div class="read-progress" aria-hidden="true" id="read-progress"></div>
@@ -723,20 +748,35 @@ if(!reduce && window.matchMedia('(hover:hover) and (pointer:fine)').matches){
 </div>
 <script>
 (()=>{
- const musicBtn=document.getElementById('musicToggle'),fxBtn=document.getElementById('fxToggle'),led=document.getElementById('soundLed');
- const Ctx=window.AudioContext||window.webkitAudioContext;
- let ctx=null, musicOn=false,fxOn=false,interval=null,notes=0;
- const chord=[196,246.94,293.66,392,440,493.88,587.33];
- function audio(){if(!Ctx)return null;if(!ctx)ctx=new Ctx();if(ctx.state==='suspended')ctx.resume();return ctx}
- function pluck(hz,vol=.045,duration=2.8){const a=audio();if(!a)return;const t=a.currentTime;const o=a.createOscillator(),g=a.createGain(),low=a.createBiquadFilter();o.type='sine';o.frequency.value=hz;low.type='lowpass';low.frequency.value=950;g.gain.setValueAtTime(.00001,t);g.gain.exponentialRampToValueAtTime(vol,t+.06);g.gain.exponentialRampToValueAtTime(.00001,t+duration);o.connect(low);low.connect(g);g.connect(a.destination);o.start(t);o.stop(t+duration+.03)}
- function phrase(){const n=chord[notes%chord.length];pluck(n,.025,3.6);if(notes%4===0)pluck(n/2,.014,5.2);notes++}
- function music(flag){musicOn=flag;if(interval)clearInterval(interval);interval=null;if(flag){audio();phrase();interval=setInterval(phrase,1300)}musicBtn.textContent=flag?'♫ MUSIC ON':'♫ MUSIC OFF';musicBtn.classList.toggle('on',flag);musicBtn.setAttribute('aria-pressed',String(flag));led.classList.toggle('active',flag)}
- function clickSfx(){if(!fxOn)return;pluck(660,.018,.12)}
- musicBtn.addEventListener('click',()=>music(!musicOn));
- fxBtn.addEventListener('click',()=>{fxOn=!fxOn;fxBtn.textContent=fxOn?'FX ON':'FX OFF';fxBtn.classList.toggle('on',fxOn);fxBtn.setAttribute('aria-pressed',String(fxOn));if(fxOn)clickSfx()});
- document.addEventListener('click',e=>{if(e.target.closest('#soundDock'))return;if(e.target.closest('.cover-card,.project,.detail-actions button,.detail-footer button,nav a,.hero-sticker'))clickSfx()},true);
- document.addEventListener('visibilitychange',()=>{if(document.hidden&&musicOn)music(false)});
+  const musicBtn=document.getElementById('musicToggle'), fxBtn=document.getElementById('fxToggle'), led=document.getElementById('soundLed');
+  const Audio=window.AudioContext||window.webkitAudioContext;
+  let context=null,musicOn=false,fxOn=false,loopTimer=null,beat=0;
+  function ctx(){if(!Audio)return null;if(!context)context=new Audio();if(context.state==='suspended')context.resume();return context}
+  function tone(freq,when,dur,gain=0.07,kind='triangle'){
+    const a=ctx();if(!a)return;
+    const o=a.createOscillator(),g=a.createGain(),f=a.createBiquadFilter();
+    o.type=kind;o.frequency.setValueAtTime(freq,when);f.type='lowpass';f.frequency.value=1800;
+    g.gain.setValueAtTime(.0001,when);g.gain.exponentialRampToValueAtTime(gain,when+.025);g.gain.exponentialRampToValueAtTime(.0001,when+dur);
+    o.connect(f);f.connect(g);g.connect(a.destination);o.start(when);o.stop(when+dur+.03)
+  }
+  // Original melodic ambient composition: 4 changing chords and a 16-note motif.
+  const chords=[[174.61,261.63,349.23],[146.83,220,293.66],[130.81,196,261.63],[164.81,246.94,329.63]];
+  const melody=[523.25,659.25,698.46,659.25,587.33,523.25,440,523.25,493.88,587.33,659.25,783.99,698.46,587.33,523.25,392];
+  function playBeat(){if(!musicOn)return;const a=ctx();if(!a)return;const t=a.currentTime+.015;const pos=beat%16;const chord=chords[Math.floor(beat/8)%4];
+    if(pos%4===0){chord.forEach((hz,i)=>tone(hz,t,3.1,i===0?.035:.023,'sine'));tone(chord[0]/2,t,3.3,.04,'sine')}
+    if(pos%2===0)tone(melody[pos],t,.43,.075,'triangle');
+    else if(pos===3||pos===11)tone(melody[pos],t,.28,.035,'sine');
+    beat++;
+  }
+  function setMusic(flag){musicOn=!!flag;if(loopTimer)clearInterval(loopTimer);loopTimer=null;if(musicOn){beat=0;playBeat();loopTimer=setInterval(playBeat,345)}musicBtn.textContent=musicOn?'♫ MUSIC ON':'♫ MUSIC OFF';musicBtn.setAttribute('aria-pressed',String(musicOn));musicBtn.classList.toggle('on',musicOn);led.classList.toggle('active',musicOn)}
+  function clickFx(){if(!fxOn)return;const a=ctx();if(!a)return;tone(784,a.currentTime,.10,.025,'sine')}
+  musicBtn.addEventListener('click',()=>setMusic(!musicOn));
+  fxBtn.addEventListener('click',()=>{fxOn=!fxOn;fxBtn.textContent=fxOn?'FX ON':'FX OFF';fxBtn.setAttribute('aria-pressed',String(fxOn));fxBtn.classList.toggle('on',fxOn);clickFx()});
+  document.addEventListener('click',e=>{if(e.target.closest('#soundDock'))return;if(e.target.closest('.cover-card,.project,.detail-actions button,.detail-footer button,nav a'))clickFx()},true);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden&&musicOn)setMusic(false)});
 })();
+</script>
+<script>
 // Robust modal close: no stale inline display state when reopened.
 (()=>{
  const modal=document.getElementById('modal'),close=document.getElementById('close');
@@ -744,6 +784,24 @@ if(!reduce && window.matchMedia('(hover:hover) and (pointer:fine)').matches){
  const leave=()=>{modal.classList.remove('open');modal.style.removeProperty('display');document.body.style.removeProperty('overflow')};
  close.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();leave()},true);
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.classList.contains('open'))leave()},true);
+})();
+</script>
+
+<script>
+(()=>{
+const modal=document.getElementById('modal'),scroll=document.getElementById('detail-scroll'),close=document.getElementById('close');
+let start=null;
+if(!modal||!scroll||!close)return;
+scroll.addEventListener('touchstart',e=>{if(!modal.classList.contains('open')||e.touches.length!==1){start=null;return;}const t=e.touches[0];start={x:t.clientX,y:t.clientY,time:Date.now(),width:window.innerWidth};},{passive:true});
+scroll.addEventListener('touchend',e=>{
+ if(!start||!modal.classList.contains('open')||e.changedTouches.length!==1)return;
+ const t=e.changedTouches[0],dx=t.clientX-start.x,dy=t.clientY-start.y;
+ const singleHorizontal=Math.abs(dx)>95&&Math.abs(dx)>Math.abs(dy)*1.65&&Date.now()-start.time<850;
+ // Left-swipe back anywhere, right-swipe from left edge; preserve native pinch zoom and vertical reading.
+ if(singleHorizontal && (dx<0 || (dx>0&&start.x<44)) && (window.visualViewport?.scale||1)<1.06){close.click()}
+ start=null;
+},{passive:true});
+scroll.addEventListener('touchcancel',()=>{start=null},{passive:true});
 })();
 </script>
 </body>
